@@ -21,7 +21,6 @@ class UdpComms(controller: ActorRef, bindAddress: InetSocketAddress) extends Act
 
   def ready(ioActor: ActorRef): Receive = {
     case SendMessage(member, msg) => send(ioActor, member, msg)
-    case Broadcast(members, msg) => members.foreach(send(ioActor, _, msg))
     case Udp.Received(data, from) => (controller ? UdpMessage(data)).mapTo[UdpMessage].foreach(reply => send(ioActor, from, reply))
 }
 
@@ -32,4 +31,3 @@ class UdpComms(controller: ActorRef, bindAddress: InetSocketAddress) extends Act
 
 
 case class SendMessage(to: Member, message: UdpMessage)
-case class Broadcast(to: Iterable[Member], message: UdpMessage)

@@ -12,6 +12,7 @@ class Node(host: String, port: Int) extends Actor {
   val udp = context.actorOf(Props(classOf[UdpComms], self, localAddress))
   val http = context.actorOf(Props(classOf[HttpComms], self, localAddress))
   val failureDetector = context.actorOf(Props(classOf[FailureDetector], self, udp))
+  val broadcaster = context.actorOf(Props(classOf[Broadcaster], self, udp))
 
   val incarnationNo = new AtomicLong(0)
   var state = ClusterState(localName, Map(localName -> Member(localName, host, port, Alive, incarnationNo.getAndIncrement)))
@@ -20,6 +21,8 @@ class Node(host: String, port: Int) extends Actor {
     case p: Ping => failureDetector forward p
     case a: Ack => failureDetector forward a
     case NeedMembersForProbing => sender ! ProbeMembers(state.notDeadRemotes)
+
+    case NeedMembersForBroadcast => sender ! SendBroadcasts(state.notDeadRemotes)
 
     case ReceiveMembers(newMembers) => {
       sender ! state.members
@@ -85,7 +88,7 @@ class Node(host: String, port: Int) extends Actor {
     case member if (state.hasStrongerIncarnationFor(member)) => // Catch, but ignore
   }
   def ignore: PartialFunction[Member, Unit] = { case _ => Unit }
-  def broadcast(message: UdpMessage) = udp ! Broadcast(state.remotes, message)
+  def broadcast(message: MemberMessage) = broadcaster ! message
 
   case class ConfirmSuspicion(member: Member)
 }
@@ -94,4 +97,5 @@ class Node(host: String, port: Int) extends Actor {
 case class Join(host: InetSocketAddress)
 case class ProbeMembers(members: List[Member])
 case object NeedMembersForProbing
+case object NeedMembersForBroadcast
 case class ReceiveMembers(members: List[Member])
