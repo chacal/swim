@@ -10,4 +10,5 @@ object Config {
   val broadcastInterval = 200.millis
   val broadcastMemberCount = 3
   val maxBroadcastTransmitCount = 5
+  val indirectProbeCount = 3
 }

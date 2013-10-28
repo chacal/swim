@@ -19,8 +19,10 @@ class Node(host: String, port: Int) extends Actor with ActorLogging {
 
   def receive = {
     case p: Ping => failureDetector forward p
+    case p: IndirectPing => failureDetector forward p
     case a: Ack => failureDetector forward a
     case NeedMembersForProbing => sender ! ProbeMembers(state.notDeadRemotes)
+    case NeedMembersForIndirectProbing => sender ! state.notDeadRemotes
 
     case NeedMembersForBroadcast => sender ! SendBroadcasts(state.notDeadRemotes)
 
@@ -97,5 +99,6 @@ class Node(host: String, port: Int) extends Actor with ActorLogging {
 case class Join(host: InetSocketAddress)
 case class ProbeMembers(members: List[Member])
 case object NeedMembersForProbing
+case object NeedMembersForIndirectProbing
 case object NeedMembersForBroadcast
 case class ReceiveMembers(members: List[Member])
