@@ -26,9 +26,9 @@ class Node(host: String, port: Int) extends Actor {
       mergeMembers(newMembers)
     }
     case AliveMember(member) => handleAlive(member)
-    case SuspectMember(member) => (refute orElse suspectMember orElse ignore)(member)
+    case SuspectMember(member) => (ignoreOldIncarnations orElse refute orElse suspectMember orElse ignore)(member)
     case ConfirmSuspicion(member) => confirmSuspicion(member)
-    case DeadMember(member) => (refute orElse announceDead orElse ignore)(member)
+    case DeadMember(member) => (ignoreOldIncarnations orElse refute orElse announceDead orElse ignore)(member)
 
     case Join(host) => http ! PushMembers(host, state.members)
   }
@@ -73,7 +73,7 @@ class Node(host: String, port: Int) extends Actor {
   }
 
   def refute: PartialFunction[Member, Unit] = {
-    case offendingMember if (state.hasSameOrWeakerIncarnationFor(offendingMember) && state.isUs(offendingMember)) => {
+    case offendingMember if (state.isUs(offendingMember)) => {
       incarnationNo.set(offendingMember.incarnation + 1)  // beat offending incarnation
       state = state.updateOurIncarnation(incarnationNo.get)
       println("Refuting: " + state.us)
@@ -81,6 +81,9 @@ class Node(host: String, port: Int) extends Actor {
     }
   }
 
+  def ignoreOldIncarnations: PartialFunction[Member, Unit] = {
+    case member if (state.hasStrongerIncarnationFor(member)) => // Catch, but ignore
+  }
   def ignore: PartialFunction[Member, Unit] = { case _ => Unit }
   def broadcast(message: UdpMessage) = udp ! Broadcast(state.remotes, message)
 

@@ -22,6 +22,7 @@ case class ClusterState(localName: String, memberMap: Map[String, Member]) {
   def isUs(member: Member) = member.name == localName
   def hasWeakerIncarnationFor(member: Member) = storedIncarnationOf(member) < member.incarnation
   def hasSameOrWeakerIncarnationFor(member: Member) = storedIncarnationOf(member) <= member.incarnation
+  def hasStrongerIncarnationFor(member: Member) = ! hasSameOrWeakerIncarnationFor(member)
   def us = memberMap(localName)
 
   private def isInState(member: Member)(state: MemberState) = hasState(member)(_ == state)
