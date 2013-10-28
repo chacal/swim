@@ -1,10 +1,10 @@
 package fi.jihartik.swim
 
-import akka.actor.{Props, Actor}
+import akka.actor.{ActorLogging, Props, Actor}
 import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicLong
 
-class Node(host: String, port: Int) extends Actor {
+class Node(host: String, port: Int) extends Actor with ActorLogging {
   import context.dispatcher
 
   val localAddress = new InetSocketAddress(host, port)
@@ -48,7 +48,7 @@ class Node(host: String, port: Int) extends Actor {
 
   def handleAlive(member: Member) {
     if(state.hasWeakerIncarnationFor(member)) {
-      println("Alive: " + member)
+      log.info("Alive: " + member)
       broadcast(AliveMember(member))
       state += member
     }
@@ -56,7 +56,7 @@ class Node(host: String, port: Int) extends Actor {
 
   def suspectMember: PartialFunction[Member, Unit] = {
     case member if(state.isAlive(member)) => {
-      println("Suspect: " + member)
+      log.info("Suspect: " + member)
       broadcast(SuspectMember(member))
       state += member.copy(state = Suspect)
       context.system.scheduler.scheduleOnce(Config.suspectPeriod, self, ConfirmSuspicion(member))
@@ -71,7 +71,7 @@ class Node(host: String, port: Int) extends Actor {
     case member if(state.isNotDead(member)) => {
       broadcast(DeadMember(member))
       state -= member
-      println("Dead: " + member)
+      log.info("Dead: " + member)
     }
   }
 
@@ -79,7 +79,7 @@ class Node(host: String, port: Int) extends Actor {
     case offendingMember if (state.isUs(offendingMember)) => {
       incarnationNo.set(offendingMember.incarnation + 1)  // beat offending incarnation
       state = state.updateOurIncarnation(incarnationNo.get)
-      println("Refuting: " + state.us)
+      log.info("Refuting: " + state.us)
       broadcast(AliveMember(state.us))  // Refute our suspicion / death
     }
   }
