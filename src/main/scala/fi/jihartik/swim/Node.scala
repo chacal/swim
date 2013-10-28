@@ -70,7 +70,7 @@ class Node(host: String, port: Int) extends Actor with ActorLogging {
   def announceDead: PartialFunction[Member, Unit] = {
     case member if(state.isNotDead(member)) => {
       broadcast(DeadMember(member))
-      state -= member
+      state += member.copy(state = Dead, incarnation = 0)
       log.info("Dead: " + member)
     }
   }
