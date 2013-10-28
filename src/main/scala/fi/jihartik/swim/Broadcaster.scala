@@ -17,7 +17,7 @@ class Broadcaster(controller: ActorRef, udp: ActorRef) extends Actor {
   def sendBroadcasts(members: List[Member]) {
     val toBeSend = state.broadcasts
     toBeSend.foreach { bcast =>
-      val targetMembers = takeRandom(members, Config.broadcastMemberCount)
+      val targetMembers = Util.takeRandom(members, Config.broadcastMemberCount)
       sendBroadcast(targetMembers, bcast)
       state = state.updatedWithTransmit(bcast)
     }
@@ -26,8 +26,6 @@ class Broadcaster(controller: ActorRef, udp: ActorRef) extends Actor {
   def sendBroadcast(members: List[Member], bcast: Broadcast) {
     members.foreach(member => udp ! SendMessage(member, bcast.message))
   }
-
-  def takeRandom(member: List[Member], howMany: Int) = Random.shuffle(member).take(howMany)
 }
 
 case class SendBroadcasts(members: List[Member])
