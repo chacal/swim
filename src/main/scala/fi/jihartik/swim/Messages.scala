@@ -7,15 +7,16 @@ import spray.json._
 trait UdpMessage {
   def toByteString: ByteString
 }
+trait FailureDetectionMessage extends UdpMessage
 
-case class Ping(seqNo: Long) extends UdpMessage {
+case class Ping(seqNo: Long) extends FailureDetectionMessage {
   def toByteString = ByteString(s"0$seqNo")
 }
-case class IndirectPing(seqNo: Long, target: Member) extends UdpMessage {
+case class IndirectPing(seqNo: Long, target: Member) extends FailureDetectionMessage {
   import JsonSerialization._
   def toByteString = ByteString(s"1$seqNo ${target.toJson.compactPrint}")
 }
-case class Ack(seqNo: Long) extends UdpMessage {
+case class Ack(seqNo: Long) extends FailureDetectionMessage {
   def toByteString = ByteString(s"2$seqNo")
 }
 abstract class MemberMessage(msgType: Int) extends UdpMessage {
