@@ -4,12 +4,11 @@ import akka.actor.{ActorRef, ActorLogging, Props, Actor}
 import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicLong
 
-class Cluster(host: String, port: Int, udp: ActorRef) extends Actor with ActorLogging {
+class Cluster(host: String, port: Int, val broadcaster: ActorRef) extends Actor with ActorLogging {
   import context.dispatcher
 
   val localAddress = new InetSocketAddress(host, port)
   val localName = s"Node $host"
-  val broadcaster = context.actorOf(Props(classOf[Broadcaster], udp))
 
   val incarnationNo = new AtomicLong(0)
   var state = ClusterState(localName, Map(localName -> Member(localName, host, port, Alive, incarnationNo.getAndIncrement)))

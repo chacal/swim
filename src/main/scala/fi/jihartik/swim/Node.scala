@@ -15,7 +15,8 @@ class Node(host: String, port: Int) extends Actor{
   val localAddress = new InetSocketAddress(host, port)
   val udp = context.actorOf(Props(classOf[UdpComms], self, localAddress))
   val http = context.actorOf(Props(classOf[HttpComms], self, localAddress))
-  val cluster = context.actorOf(Props(classOf[Cluster], host, port, udp))
+  val broadcaster = context.actorOf(Props(classOf[Broadcaster], udp))
+  val cluster = context.actorOf(Props(classOf[Cluster], host, port, broadcaster))
   val failureDetector = context.actorOf(Props(classOf[FailureDetector], cluster, udp))
 
 
