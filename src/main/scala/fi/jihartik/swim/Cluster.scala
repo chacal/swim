@@ -1,15 +1,14 @@
 package fi.jihartik.swim
 
-import akka.actor.{ActorLogging, Props, Actor}
+import akka.actor.{ActorRef, ActorLogging, Props, Actor}
 import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicLong
 
-class Cluster(host: String, port: Int) extends Actor with ActorLogging {
+class Cluster(host: String, port: Int, udp: ActorRef) extends Actor with ActorLogging {
   import context.dispatcher
 
   val localAddress = new InetSocketAddress(host, port)
   val localName = s"Node $host"
-  val udp = context.actorOf(Props(classOf[UdpComms], self, localAddress))
   val failureDetector = context.actorOf(Props(classOf[FailureDetector], self, udp))
   val broadcaster = context.actorOf(Props(classOf[Broadcaster], self, udp))
 

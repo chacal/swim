@@ -13,11 +13,13 @@ class Node(host: String, port: Int) extends Actor{
   import context.dispatcher
 
   val localAddress = new InetSocketAddress(host, port)
-  val cluster = context.actorOf(Props(classOf[Cluster], host, port))
+  val udp = context.actorOf(Props(classOf[UdpComms], self, localAddress))
   val http = context.actorOf(Props(classOf[HttpComms], self, localAddress))
+  val cluster = context.actorOf(Props(classOf[Cluster], host, port, udp))
 
   def receive = {
     case Join(host) => cluster.ask(GetMembers).mapTo[List[Member]].map(PushMembers(host, _)).pipeTo(http)
     case msg: ReceiveMembers => cluster forward msg
+    case msg: UdpMessage => cluster forward msg
   }
 }
