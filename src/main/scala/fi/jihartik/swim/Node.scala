@@ -23,6 +23,6 @@ class Node(host: String, port: Int) extends Actor{
     case Join(host) => cluster.ask(GetMembers).mapTo[List[Member]].map(PushMembers(host, _)).pipeTo(http)
     case msg: ReceiveMembers => cluster forward msg
     case msg: FailureDetectionMessage => failureDetector forward msg
-    case msg: UdpMessage => cluster forward msg
+    case msg: MemberStateMessage => cluster forward msg
   }
 }

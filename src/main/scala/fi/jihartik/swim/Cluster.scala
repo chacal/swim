@@ -84,7 +84,7 @@ class Cluster(host: String, port: Int, udp: ActorRef) extends Actor with ActorLo
     case member if (state.hasStrongerIncarnationFor(member)) => // Catch, but ignore
   }
   def ignore: PartialFunction[Member, Unit] = { case _ => Unit }
-  def broadcast(message: MemberMessage) = broadcaster ! message
+  def broadcast(message: MemberStateMessage) = broadcaster ! message
 
   case class ConfirmSuspicion(member: Member)
 }

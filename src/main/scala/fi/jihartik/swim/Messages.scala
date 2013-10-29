@@ -19,14 +19,14 @@ case class IndirectPing(seqNo: Long, target: Member) extends FailureDetectionMes
 case class Ack(seqNo: Long) extends FailureDetectionMessage {
   def toByteString = ByteString(s"2$seqNo")
 }
-abstract class MemberMessage(msgType: Int) extends UdpMessage {
+abstract class MemberStateMessage(msgType: Int) extends UdpMessage {
   import JsonSerialization._
   def member: Member
   def toByteString = ByteString(s"$msgType${member.toJson.compactPrint}")
 }
-case class AliveMember(member: Member) extends MemberMessage(3)
-case class SuspectMember(member: Member) extends MemberMessage(4)
-case class DeadMember(member: Member) extends MemberMessage(5)
+case class AliveMember(member: Member) extends MemberStateMessage(3)
+case class SuspectMember(member: Member) extends MemberStateMessage(4)
+case class DeadMember(member: Member) extends MemberStateMessage(5)
 
 
 object UdpMessage {

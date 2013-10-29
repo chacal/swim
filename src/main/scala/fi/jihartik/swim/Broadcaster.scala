@@ -10,7 +10,7 @@ class Broadcaster(controller: ActorRef, udp: ActorRef) extends Actor {
   override def preStart = context.system.scheduler.schedule(Config.broadcastInterval, Config.broadcastInterval, controller, NeedMembersForBroadcast)
 
   def receive = {
-    case msg: MemberMessage => state += Broadcast(msg, transmitCount = 0)
+    case msg: MemberStateMessage => state += Broadcast(msg, transmitCount = 0)
     case SendBroadcasts(members: List[Member]) => sendBroadcasts(members)
   }
 
@@ -29,7 +29,7 @@ class Broadcaster(controller: ActorRef, udp: ActorRef) extends Actor {
 }
 
 case class SendBroadcasts(members: List[Member])
-case class Broadcast(message: MemberMessage, transmitCount: Int)
+case class Broadcast(message: MemberStateMessage, transmitCount: Int)
 
 case class BroadcastState(val broadcastMap: Map[String, Broadcast]) {
   def +(broadcast: Broadcast) = this.copy(broadcastMap + (broadcast.message.member.name -> broadcast))
