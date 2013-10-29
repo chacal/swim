@@ -1,13 +1,9 @@
 package fi.jihartik.swim
 
 import akka.actor.{ActorRef, Actor}
-import scala.util.Random
 
-class Broadcaster(controller: ActorRef, udp: ActorRef) extends Actor {
-  import context.dispatcher
+class Broadcaster(udp: ActorRef) extends Actor {
   var state = BroadcastState(Map())
-
-  override def preStart = context.system.scheduler.schedule(Config.broadcastInterval, Config.broadcastInterval, controller, NeedMembersForBroadcast)
 
   def receive = {
     case msg: MemberStateMessage => state += Broadcast(msg, transmitCount = 0)

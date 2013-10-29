@@ -9,16 +9,18 @@ class Cluster(host: String, port: Int, udp: ActorRef) extends Actor with ActorLo
 
   val localAddress = new InetSocketAddress(host, port)
   val localName = s"Node $host"
-  val broadcaster = context.actorOf(Props(classOf[Broadcaster], self, udp))
+  val broadcaster = context.actorOf(Props(classOf[Broadcaster], udp))
 
   val incarnationNo = new AtomicLong(0)
   var state = ClusterState(localName, Map(localName -> Member(localName, host, port, Alive, incarnationNo.getAndIncrement)))
+
+  override def preStart = context.system.scheduler.schedule(Config.broadcastInterval, Config.broadcastInterval, self, TriggerBroadcasts)
 
   def receive = {
     case NeedMembersForProbing => sender ! ProbeMembers(state.notDeadRemotes)
     case NeedMembersForIndirectProbing => sender ! state.notDeadRemotes
 
-    case NeedMembersForBroadcast => sender ! SendBroadcasts(state.notDeadRemotes)
+    case TriggerBroadcasts => broadcaster ! SendBroadcasts(state.notDeadRemotes)
 
     case GetMembers => sender ! state.members
 
@@ -87,6 +89,7 @@ class Cluster(host: String, port: Int, udp: ActorRef) extends Actor with ActorLo
   def broadcast(message: MemberStateMessage) = broadcaster ! message
 
   case class ConfirmSuspicion(member: Member)
+  case object TriggerBroadcasts
 }
 
 
@@ -94,6 +97,5 @@ case class Join(host: InetSocketAddress)
 case class ProbeMembers(members: List[Member])
 case object NeedMembersForProbing
 case object NeedMembersForIndirectProbing
-case object NeedMembersForBroadcast
 case class ReceiveMembers(members: List[Member])
 case object GetMembers
