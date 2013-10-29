@@ -7,14 +7,14 @@ import akka.pattern.pipe
 import akka.util.Timeout
 import scala.concurrent.duration._
 
-class FailureDetector(controller: ActorRef, udp: ActorRef) extends Actor with ActorLogging {
+class FailureDetector(cluster: ActorRef, udp: ActorRef) extends Actor with ActorLogging {
   import context.dispatcher
   implicit val timeout = Timeout(5.seconds)
 
   val probeSeqNo = new AtomicLong(0)
   var outstandingProbes = Map[Long, OutstandingProbe]()
 
-  override def preStart = context.system.scheduler.schedule(Config.probeInterval, Config.probeInterval, controller, NeedMembersForProbing)
+  override def preStart = context.system.scheduler.schedule(Config.probeInterval, Config.probeInterval, cluster, NeedMembersForProbing)
 
   def receive = {
     case ProbeMembers(members) => probeMembers(members)
@@ -60,7 +60,7 @@ class FailureDetector(controller: ActorRef, udp: ActorRef) extends Actor with Ac
 
   def startIndirectProbe(seqNo: Long, target: Member) {
     def createIndirectProbe(members: List[Member]) = ProbeIndirectly(Util.takeRandom(members.filter(_.name != target.name), Config.indirectProbeCount), seqNo)
-    controller.ask(NeedMembersForIndirectProbing).mapTo[List[Member]].map(createIndirectProbe).pipeTo(self)
+    cluster.ask(NeedMembersForIndirectProbing).mapTo[List[Member]].map(createIndirectProbe).pipeTo(self)
   }
 
   def probeIndirectly(forwarders: List[Member], seqNo: Long) {
@@ -72,7 +72,7 @@ class FailureDetector(controller: ActorRef, udp: ActorRef) extends Actor with Ac
   }
 
   def handleIndirectAckTimeout(seqNo: Long) {
-    outstandingProbes.get(seqNo).foreach(probe => controller ! SuspectMember(probe.target))
+    outstandingProbes.get(seqNo).foreach(probe => cluster ! SuspectMember(probe.target))
     outstandingProbes -= seqNo
   }
 

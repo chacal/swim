@@ -9,16 +9,12 @@ class Cluster(host: String, port: Int, udp: ActorRef) extends Actor with ActorLo
 
   val localAddress = new InetSocketAddress(host, port)
   val localName = s"Node $host"
-  val failureDetector = context.actorOf(Props(classOf[FailureDetector], self, udp))
   val broadcaster = context.actorOf(Props(classOf[Broadcaster], self, udp))
 
   val incarnationNo = new AtomicLong(0)
   var state = ClusterState(localName, Map(localName -> Member(localName, host, port, Alive, incarnationNo.getAndIncrement)))
 
   def receive = {
-    case p: Ping => failureDetector forward p
-    case p: IndirectPing => failureDetector forward p
-    case a: Ack => failureDetector forward a
     case NeedMembersForProbing => sender ! ProbeMembers(state.notDeadRemotes)
     case NeedMembersForIndirectProbing => sender ! state.notDeadRemotes
 

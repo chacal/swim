@@ -16,10 +16,15 @@ class Node(host: String, port: Int) extends Actor{
   val udp = context.actorOf(Props(classOf[UdpComms], self, localAddress))
   val http = context.actorOf(Props(classOf[HttpComms], self, localAddress))
   val cluster = context.actorOf(Props(classOf[Cluster], host, port, udp))
+  val failureDetector = context.actorOf(Props(classOf[FailureDetector], cluster, udp))
+
 
   def receive = {
     case Join(host) => cluster.ask(GetMembers).mapTo[List[Member]].map(PushMembers(host, _)).pipeTo(http)
     case msg: ReceiveMembers => cluster forward msg
+    case p: Ping => failureDetector forward p
+    case p: IndirectPing => failureDetector forward p
+    case a: Ack => failureDetector forward a
     case msg: UdpMessage => cluster forward msg
   }
 }
