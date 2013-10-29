@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, ActorLogging, Props, Actor}
 import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicLong
 
-class Cluster(host: String, port: Int, val broadcaster: ActorRef) extends Actor with ActorLogging {
+class Cluster(host: String, port: Int, broadcaster: ActorRef, failureDetector: ActorRef) extends Actor with ActorLogging {
   import context.dispatcher
 
   val localAddress = new InetSocketAddress(host, port)
@@ -13,13 +13,14 @@ class Cluster(host: String, port: Int, val broadcaster: ActorRef) extends Actor 
   val incarnationNo = new AtomicLong(0)
   var state = ClusterState(localName, Map(localName -> Member(localName, host, port, Alive, incarnationNo.getAndIncrement)))
 
-  override def preStart = context.system.scheduler.schedule(Config.broadcastInterval, Config.broadcastInterval, self, TriggerBroadcasts)
+  override def preStart = {
+    context.system.scheduler.schedule(Config.broadcastInterval, Config.broadcastInterval, self, TriggerBroadcasts)
+    context.system.scheduler.schedule(Config.probeInterval, Config.probeInterval, self, TriggerProbes)
+  }
 
   def receive = {
-    case NeedMembersForProbing => sender ! ProbeMembers(state.notDeadRemotes)
-    case NeedMembersForIndirectProbing => sender ! state.notDeadRemotes
-
     case TriggerBroadcasts => broadcaster ! SendBroadcasts(state.notDeadRemotes)
+    case TriggerProbes => failureDetector ! ProbeMembers(state.notDeadRemotes)
 
     case GetMembers => sender ! state.members
 
@@ -89,12 +90,11 @@ class Cluster(host: String, port: Int, val broadcaster: ActorRef) extends Actor 
 
   case class ConfirmSuspicion(member: Member)
   case object TriggerBroadcasts
+  case object TriggerProbes
 }
 
 
 case class Join(host: InetSocketAddress)
 case class ProbeMembers(members: List[Member])
-case object NeedMembersForProbing
-case object NeedMembersForIndirectProbing
 case class ReceiveMembers(members: List[Member])
 case object GetMembers
