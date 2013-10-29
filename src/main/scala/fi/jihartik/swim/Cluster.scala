@@ -10,7 +10,6 @@ class Cluster(host: String, port: Int) extends Actor with ActorLogging {
   val localAddress = new InetSocketAddress(host, port)
   val localName = s"Node $host"
   val udp = context.actorOf(Props(classOf[UdpComms], self, localAddress))
-  val http = context.actorOf(Props(classOf[HttpComms], self, localAddress))
   val failureDetector = context.actorOf(Props(classOf[FailureDetector], self, udp))
   val broadcaster = context.actorOf(Props(classOf[Broadcaster], self, udp))
 
@@ -26,6 +25,8 @@ class Cluster(host: String, port: Int) extends Actor with ActorLogging {
 
     case NeedMembersForBroadcast => sender ! SendBroadcasts(state.notDeadRemotes)
 
+    case GetMembers => sender ! state.members
+
     case ReceiveMembers(newMembers) => {
       sender ! state.members
       mergeMembers(newMembers)
@@ -34,8 +35,6 @@ class Cluster(host: String, port: Int) extends Actor with ActorLogging {
     case SuspectMember(member) => (ignoreOldIncarnations orElse refute orElse suspectMember orElse ignore)(member)
     case ConfirmSuspicion(member) => confirmSuspicion(member)
     case DeadMember(member) => (ignoreOldIncarnations orElse refute orElse announceDead orElse ignore)(member)
-
-    case Join(host) => http ! PushMembers(host, state.members)
   }
 
   def mergeMembers(remoteMembers: List[Member]) {
@@ -102,3 +101,4 @@ case object NeedMembersForProbing
 case object NeedMembersForIndirectProbing
 case object NeedMembersForBroadcast
 case class ReceiveMembers(members: List[Member])
+case object GetMembers
