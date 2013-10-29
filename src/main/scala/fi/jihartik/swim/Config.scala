@@ -11,4 +11,5 @@ object Config {
   val broadcastMemberCount = 3
   val maxBroadcastTransmitCount = 5
   val indirectProbeCount = 3
+  val maxUdpMessageSize = 40000
 }

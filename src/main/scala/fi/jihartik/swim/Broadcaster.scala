@@ -1,8 +1,9 @@
 package fi.jihartik.swim
 
-import akka.actor.{ActorRef, Actor}
+import akka.actor.{ActorLogging, ActorRef, Actor}
+import scala.annotation.tailrec
 
-class Broadcaster(udp: ActorRef) extends Actor {
+class Broadcaster(udp: ActorRef) extends Actor with ActorLogging {
   var state = BroadcastState(Map())
 
   def receive = {
@@ -12,15 +13,35 @@ class Broadcaster(udp: ActorRef) extends Actor {
 
   def sendBroadcasts(members: List[Member]) {
     val toBeSend = state.broadcasts
-    toBeSend.foreach { bcast =>
+    if(! toBeSend.isEmpty) {
+      val (combinedBroadcasts, compoundMsg) = createCompoundMessage(toBeSend)
       val targetMembers = Util.takeRandom(members, Config.broadcastMemberCount)
-      sendBroadcast(targetMembers, bcast)
-      state = state.updatedWithTransmit(bcast)
+      sendMessage(targetMembers, compoundMsg)
+      state = state.updatedWithTransmit(combinedBroadcasts)
     }
   }
 
-  def sendBroadcast(members: List[Member], bcast: Broadcast) {
-    members.foreach(member => udp ! SendMessage(member, bcast.message))
+  def sendMessage(members: List[Member], message: CompoundUdpMessage) {
+    members.foreach(member => udp ! SendMessage(member, message))
+  }
+
+  def createCompoundMessage(broadcasts: List[Broadcast]) = {
+    val sortedByTransmitCount = broadcasts.sortBy(_.transmitCount)
+    @tailrec
+    def addBroadcasts(toBeSent: List[Broadcast], sent: List[Broadcast], createdMessage: CompoundUdpMessage): (List[Broadcast], CompoundUdpMessage) = {
+      toBeSent match {
+        case Nil => (sent, createdMessage)
+        case x :: xs => {
+          val nextCandidate = createdMessage.copy(messages = createdMessage.messages :+ x.message)
+          if(createdMessage.toByteString.length < Config.maxUdpMessageSize) {
+            addBroadcasts(xs, sent :+ x, nextCandidate)
+          } else {
+            (sent, createdMessage)
+          }
+        }
+      }
+    }
+    addBroadcasts(sortedByTransmitCount, Nil, CompoundUdpMessage(Nil))
   }
 }
 
@@ -31,12 +52,14 @@ case class BroadcastState(val broadcastMap: Map[String, Broadcast]) {
   def +(broadcast: Broadcast) = this.copy(broadcastMap + (broadcast.message.member.name -> broadcast))
   def -(broadcast: Broadcast) = this.copy(broadcastMap - broadcast.message.member.name)
   def broadcasts = broadcastMap.values.toList
-  def updatedWithTransmit(broadcast: Broadcast) = {
-    if(broadcast.transmitCount < Config.maxBroadcastTransmitCount - 1) {  // Transmit count has not yet been updated
-      this.`+`(broadcast.copy(transmitCount = broadcast.transmitCount + 1))
-    } else {
-      this.`-`(broadcast)
+  def updatedWithTransmit(transmitted: List[Broadcast]) = {
+    val newBroadcastMap = transmitted.foldLeft(broadcastMap) { case (map, broadcast) =>
+      if(broadcast.transmitCount < Config.maxBroadcastTransmitCount - 1) {  // Transmit count has not yet been updated
+        map + (broadcast.message.member.name -> broadcast.copy(transmitCount = broadcast.transmitCount + 1))
+      } else {
+        map - broadcast.message.member.name
+      }
     }
+    this.copy(newBroadcastMap)
   }
-
 }

@@ -18,7 +18,7 @@ class Cluster(host: String, port: Int, broadcaster: ActorRef, failureDetector: A
     context.system.scheduler.schedule(Config.probeInterval, Config.probeInterval, self, TriggerProbes)
   }
 
-  def receive = {
+  def receive = handleMemberStateMessages orElse {
     case TriggerBroadcasts => broadcaster ! SendBroadcasts(state.notDeadRemotes)
     case TriggerProbes => failureDetector ! ProbeMembers(state.notDeadRemotes)
 
@@ -28,6 +28,10 @@ class Cluster(host: String, port: Int, broadcaster: ActorRef, failureDetector: A
       sender ! state.members
       mergeMembers(newMembers)
     }
+    case CompoundUdpMessage(messages) => messages.foreach(handleMemberStateMessages)
+  }
+
+  def handleMemberStateMessages: Receive = {
     case AliveMember(member) => handleAlive(member)
     case SuspectMember(member) => (ignoreOldIncarnations orElse refute orElse suspectMember orElse ignore)(member)
     case ConfirmSuspicion(member) => confirmSuspicion(member)
