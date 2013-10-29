@@ -13,7 +13,7 @@ import spray.client.pipelining._
 import spray.httpx.SprayJsonSupport._
 
 
-class HttpComms(controller: ActorRef, bindAddress: InetSocketAddress) extends Actor {
+class HttpComms(node: ActorRef, bindAddress: InetSocketAddress) extends Actor {
   import context.dispatcher
   import JsonSerialization._
 
@@ -22,14 +22,14 @@ class HttpComms(controller: ActorRef, bindAddress: InetSocketAddress) extends Ac
   override def preStart() = IO(Http)(context.system) ! Http.Bind(self, bindAddress, 100, Nil, None)
 
   def receive = {
-    case Http.Connected(_, _) => sender ! Http.Register(context.system.actorOf(Props(new HttpHandler(controller))))
-    case PushMembers(to, members) => (httpPipeline ~> unmarshal[List[Member]]).apply(sendMembersRequest(to, members)).map(ReceiveMembers) pipeTo controller
+    case Http.Connected(_, _) => sender ! Http.Register(context.system.actorOf(Props(new HttpHandler(node))))
+    case PushMembers(to, members) => (httpPipeline ~> unmarshal[List[Member]]).apply(sendMembersRequest(to, members)).map(ReceiveMembers) pipeTo node
   }
 
   private def sendMembersRequest(to: InetSocketAddress, members: List[Member]) = Post(s"http://${to.getHostName}:${to.getPort}/members", members)
 }
 
-class HttpHandler(controller: ActorRef) extends HttpServiceActor {
+class HttpHandler(node: ActorRef) extends HttpServiceActor {
   import context.dispatcher
   import JsonSerialization._
   implicit val timeout = Timeout(5.seconds)
@@ -39,13 +39,13 @@ class HttpHandler(controller: ActorRef) extends HttpServiceActor {
       post {
         entity(as[List[Member]]) { members =>
           complete {
-            controller.ask(ReceiveMembers(members)).mapTo[List[Member]]
+            node.ask(ReceiveMembers(members)).mapTo[List[Member]]
           }
         }
       } ~
       get {
         complete {
-          controller.ask(ReceiveMembers(Nil)).mapTo[List[Member]]
+          node.ask(ReceiveMembers(Nil)).mapTo[List[Member]]
         }
       }
     }
