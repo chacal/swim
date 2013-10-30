@@ -1,11 +1,9 @@
 package fi.jihartik.swim
 
 import akka.actor.{ActorRef, ActorLogging, Actor}
-import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicLong
 
 class Cluster(host: String, port: Int, broadcaster: ActorRef) extends Actor with ActorLogging {
-  val localAddress = new InetSocketAddress(host, port)
   val localName = s"Node $host"
 
   val incarnationNo = new AtomicLong(0)
