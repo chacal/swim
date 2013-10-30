@@ -16,10 +16,14 @@ class FailureDetector(udp: ActorRef) extends Actor with ActorLogging {
     def forwardersFor(target: Member) = Util.takeRandom(members.filterNot(_.name == target.name), Config.indirectProbeCount)
 
     val probedMembers = Util.takeRandom(members, Config.probedMemberCount)
-    probedMembers.foreach(target => context.actorOf(Props(classOf[DirectPinger], sender, target, forwardersFor(target), udp)))
+    probedMembers.foreach(target => startDirectPinger(sender, target, forwardersFor(target), udp))
   }
 
   def forwardPing(seqNo: Long, target: Member) = context.actorOf(Props(classOf[ForwardPinger], sender, target, seqNo, udp))
+
+  private def startDirectPinger(sender: ActorRef, target: Member, forwarders: List[Member], udp: ActorRef) = {
+    context.actorOf(Props(classOf[DirectPinger], sender, target, forwarders, udp))
+  }
 }
 
 case class ProbeMembers(members: List[Member])
