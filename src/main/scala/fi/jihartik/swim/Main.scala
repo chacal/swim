@@ -12,7 +12,6 @@ object Node1 extends App {
 object Node2 extends App {
   val system = ActorSystem()
   val node = system.actorOf(Props(classOf[Node], "127.0.0.2", 10002))
-  Thread.sleep(1000)
   node ! Join("127.0.0.1", 10001)
 }
 
@@ -20,7 +19,6 @@ object Node2 extends App {
 object Node3 extends App {
   val system = ActorSystem()
   val node = system.actorOf(Props(classOf[Node], "127.0.0.3", 10003))
-  Thread.sleep(1000)
   node ! Join("127.0.0.1", 10001)
 }
 
