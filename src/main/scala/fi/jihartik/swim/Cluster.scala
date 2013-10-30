@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, ActorLogging, Actor}
 import java.util.concurrent.atomic.AtomicLong
 
 class Cluster(host: String, port: Int, broadcaster: ActorRef) extends Actor with ActorLogging {
-  val localName = s"Node $host"
+  val localName = s"Node $host:$port"
 
   val incarnationNo = new AtomicLong(0)
   var state = ClusterState(localName, Map(localName -> Member(localName, host, port, Alive, incarnationNo.getAndIncrement)))
