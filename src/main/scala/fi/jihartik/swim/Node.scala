@@ -29,8 +29,10 @@ class Node(host: String, port: Int) extends Actor{
 
   def receive = {
     case Join(host) => getMembers.map(SendMembers(host, _)).pipeTo(http)
-    case msg: ClusterStateMessage => cluster ! msg
     case msg @ GetMembers => getMembers pipeTo sender
+
+    case CompoundUdpMessage(messages) => messages.foreach(cluster ! _)
+    case msg: ClusterStateMessage => cluster ! msg
 
     case TriggerProbes => {
       val sender = self

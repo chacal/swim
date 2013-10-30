@@ -11,15 +11,11 @@ class Cluster(host: String, port: Int, broadcaster: ActorRef) extends Actor with
   val incarnationNo = new AtomicLong(0)
   var state = ClusterState(localName, Map(localName -> Member(localName, host, port, Alive, incarnationNo.getAndIncrement)))
 
-  def receive = handleMemberStateMessages orElse {
+  def receive = {
     case GetMembers => sender ! state.members
     case GetNotDeadRemotes => sender ! state.notDeadRemotes
 
     case NewMembers(newMembers) => mergeMembers(newMembers)
-    case CompoundUdpMessage(messages) => messages.foreach(handleMemberStateMessages)
-  }
-
-  def handleMemberStateMessages: Receive = {
     case AliveMember(member) => handleAlive(member)
     case SuspectMember(member) => (ignoreOldIncarnations orElse refute orElse suspectMember orElse ignore)(member)
     case ConfirmSuspicion(member) => confirmSuspicion(member)
