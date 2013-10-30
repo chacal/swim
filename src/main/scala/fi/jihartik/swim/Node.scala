@@ -49,3 +49,5 @@ class Node(host: String, port: Int) extends Actor{
   case object TriggerProbes
   case object TriggerBroadcasts
 }
+
+case class Join(host: InetSocketAddress)

@@ -79,7 +79,5 @@ class Cluster(host: String, port: Int, broadcaster: ActorRef) extends Actor with
   case class ConfirmSuspicion(member: Member)
 }
 
-
-case class Join(host: InetSocketAddress)
 case object GetMembers
 case object GetNotDeadRemotes
