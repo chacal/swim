@@ -55,7 +55,7 @@ class DirectPinger(receiver: ActorRef, target: Member, possibleForwarders: List[
 
 class IndirectPinger(receiver: ActorRef, target: Member, forwarders: List[Member], val udp: ActorRef) extends Pinger {
   def sendPings = forwarders.foreach(fwd => udp ! SendMessage(fwd, IndirectPing(seqNo, target)))
-  override def ackTimedOut = receiver ! SuspectMember(target)
+  override def ackTimedOut = receiver ! ProbeTimedOut(target)
 }
 
 

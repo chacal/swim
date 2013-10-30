@@ -1,10 +1,10 @@
 package fi.jihartik.swim
 
-import akka.actor.{ActorRef, ActorLogging, Props, Actor}
+import akka.actor.{ActorRef, ActorLogging, Actor}
 import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicLong
 
-class Cluster(host: String, port: Int, broadcaster: ActorRef, failureDetector: ActorRef) extends Actor with ActorLogging {
+class Cluster(host: String, port: Int, broadcaster: ActorRef) extends Actor with ActorLogging {
   val localAddress = new InetSocketAddress(host, port)
   val localName = s"Node $host"
 
@@ -13,14 +13,13 @@ class Cluster(host: String, port: Int, broadcaster: ActorRef, failureDetector: A
 
   override def preStart = {
     Util.schedule(Config.broadcastInterval, self, TriggerBroadcasts)
-    Util.schedule(Config.probeInterval, self, TriggerProbes)
   }
 
   def receive = handleMemberStateMessages orElse {
     case TriggerBroadcasts => broadcaster ! SendBroadcasts(state.notDeadRemotes)
-    case TriggerProbes => failureDetector ! ProbeMembers(state.notDeadRemotes)
 
     case GetMembers => sender ! state.members
+    case GetRemotes => sender ! state.remotes
 
     case NewMembers(newMembers) => mergeMembers(newMembers)
     case CompoundUdpMessage(messages) => messages.foreach(handleMemberStateMessages)
@@ -89,10 +88,9 @@ class Cluster(host: String, port: Int, broadcaster: ActorRef, failureDetector: A
 
   case class ConfirmSuspicion(member: Member)
   case object TriggerBroadcasts
-  case object TriggerProbes
 }
 
 
 case class Join(host: InetSocketAddress)
-case class ProbeMembers(members: List[Member])
 case object GetMembers
+case object GetRemotes

@@ -13,19 +13,33 @@ class Node(host: String, port: Int) extends Actor{
   import context.dispatcher
 
   val localAddress = new InetSocketAddress(host, port)
+
   val udp = context.actorOf(Props(classOf[UdpComms], localAddress), "udp")
   val http = context.actorOf(Props(classOf[HttpComms], self, localAddress), "http")
+  val failureDetector = context.actorOf(Props(classOf[FailureDetector], udp), "failure-detector")
 
   val broadcaster = context.actorOf(Props(classOf[Broadcaster], udp), "broadcaster")
-  val failureDetector = context.actorOf(Props(classOf[FailureDetector], udp), "failure-detector")
-  val cluster = context.actorOf(Props(classOf[Cluster], host, port, broadcaster, failureDetector), "cluster")
+  val cluster = context.actorOf(Props(classOf[Cluster], host, port, broadcaster), "cluster")
   udp ! RegisterReceiver(self)
+
+  override def preStart = {
+    Util.schedule(Config.probeInterval, self, TriggerProbes)
+  }
 
   def receive = {
     case Join(host) => getMembers.map(SendMembers(host, _)).pipeTo(http)
     case msg: ClusterStateMessage => cluster ! msg
     case msg @ GetMembers => getMembers pipeTo sender
+
+    case TriggerProbes => {
+      val sender = self
+      getRemoteMembers.onSuccess { case members => failureDetector.tell(ProbeMembers(members), sender) }  // Use us as a sender to get timeouts back properly
+    }
+    case ProbeTimedOut(member) => cluster ! SuspectMember(member)
   }
 
   private def getMembers = cluster.ask(GetMembers).mapTo[List[Member]]
+  private def getRemoteMembers = cluster.ask(GetRemotes).mapTo[List[Member]]
+
+  case object TriggerProbes
 }

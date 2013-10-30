@@ -21,3 +21,6 @@ class FailureDetector(udp: ActorRef) extends Actor with ActorLogging {
 
   def forwardPing(seqNo: Long, target: Member) = context.actorOf(Props(classOf[ForwardPinger], sender, target, seqNo, udp))
 }
+
+case class ProbeMembers(members: List[Member])
+case class ProbeTimedOut(member: Member)
