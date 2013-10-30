@@ -50,4 +50,7 @@ class Node(host: String, port: Int) extends Actor{
   case object TriggerBroadcasts
 }
 
+object Join {
+  def apply(host: String, port: Int): Join = Join(new InetSocketAddress(host, port))
+}
 case class Join(host: InetSocketAddress)
