@@ -9,6 +9,7 @@ trait UdpMessage {
   def toByteString: ByteString = ByteString(toMessageString)
 }
 trait FailureDetectionMessage extends UdpMessage
+trait ClusterStateMessage
 
 case class Ping(seqNo: Long) extends FailureDetectionMessage {
   def toMessageString = s"0$seqNo"
@@ -20,7 +21,7 @@ case class IndirectPing(seqNo: Long, target: Member) extends FailureDetectionMes
 case class Ack(seqNo: Long) extends FailureDetectionMessage {
   def toMessageString = s"2$seqNo"
 }
-abstract class MemberStateMessage(msgType: Int) extends UdpMessage {
+abstract class MemberStateMessage(msgType: Int) extends UdpMessage with ClusterStateMessage {
   import JsonSerialization._
   def member: Member
   def toMessageString = s"$msgType${member.toJson.compactPrint}"
@@ -28,13 +29,15 @@ abstract class MemberStateMessage(msgType: Int) extends UdpMessage {
 case class AliveMember(member: Member) extends MemberStateMessage(3)
 case class SuspectMember(member: Member) extends MemberStateMessage(4)
 case class DeadMember(member: Member) extends MemberStateMessage(5)
-case class CompoundUdpMessage(messages: List[UdpMessage]) extends UdpMessage {
+case class CompoundUdpMessage(messages: List[UdpMessage]) extends UdpMessage with ClusterStateMessage {
   def toMessageString = "6" ++ messages.map { msg =>
     val msgBody = msg.toMessageString
     val msgHeader = msgBody.size + " "
     msgHeader ++ msgBody
   }.foldLeft("")(_ + _)
 }
+case class NewMembers(members: List[Member]) extends ClusterStateMessage
+
 
 object UdpMessage {
   import JsonSerialization._

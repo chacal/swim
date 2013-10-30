@@ -1,35 +1,19 @@
 package fi.jihartik.swim
 
-import akka.actor.{ActorRef, ActorLogging, Props, Actor}
-import java.net.InetSocketAddress
+import akka.actor.{ActorRef, ActorLogging, Actor}
 import java.util.concurrent.atomic.AtomicLong
 
-class Cluster(host: String, port: Int, broadcaster: ActorRef, failureDetector: ActorRef) extends Actor with ActorLogging {
-  val localAddress = new InetSocketAddress(host, port)
+class Cluster(host: String, port: Int, broadcaster: ActorRef) extends Actor with ActorLogging {
   val localName = s"Node $host"
 
   val incarnationNo = new AtomicLong(0)
   var state = ClusterState(localName, Map(localName -> Member(localName, host, port, Alive, incarnationNo.getAndIncrement)))
 
-  override def preStart = {
-    Util.schedule(Config.broadcastInterval, self, TriggerBroadcasts)
-    Util.schedule(Config.probeInterval, self, TriggerProbes)
-  }
-
-  def receive = handleMemberStateMessages orElse {
-    case TriggerBroadcasts => broadcaster ! SendBroadcasts(state.notDeadRemotes)
-    case TriggerProbes => failureDetector ! ProbeMembers(state.notDeadRemotes)
-
+  def receive = {
     case GetMembers => sender ! state.members
+    case GetNotDeadRemotes => sender ! state.notDeadRemotes
 
-    case ReceiveMembers(newMembers) => {
-      sender ! state.members
-      mergeMembers(newMembers)
-    }
-    case CompoundUdpMessage(messages) => messages.foreach(handleMemberStateMessages)
-  }
-
-  def handleMemberStateMessages: Receive = {
+    case NewMembers(newMembers) => mergeMembers(newMembers)
     case AliveMember(member) => handleAlive(member)
     case SuspectMember(member) => (ignoreOldIncarnations orElse refute orElse suspectMember orElse ignore)(member)
     case ConfirmSuspicion(member) => confirmSuspicion(member)
@@ -91,12 +75,7 @@ class Cluster(host: String, port: Int, broadcaster: ActorRef, failureDetector: A
   def broadcast(message: MemberStateMessage) = broadcaster ! message
 
   case class ConfirmSuspicion(member: Member)
-  case object TriggerBroadcasts
-  case object TriggerProbes
 }
 
-
-case class Join(host: InetSocketAddress)
-case class ProbeMembers(members: List[Member])
-case class ReceiveMembers(members: List[Member])
 case object GetMembers
+case object GetNotDeadRemotes

@@ -43,23 +43,25 @@ class Broadcaster(udp: ActorRef) extends Actor with ActorLogging {
     }
     addBroadcasts(sortedByTransmitCount, Nil, CompoundUdpMessage(Nil))
   }
+
+
+  case class Broadcast(message: MemberStateMessage, transmitCount: Int)
+
+  case class BroadcastState(val broadcastMap: Map[String, Broadcast]) {
+    def +(broadcast: Broadcast) = this.copy(broadcastMap + (broadcast.message.member.name -> broadcast))
+    def -(broadcast: Broadcast) = this.copy(broadcastMap - broadcast.message.member.name)
+    def broadcasts = broadcastMap.values.toList
+    def updatedWithTransmit(transmitted: List[Broadcast]) = {
+      val newBroadcastMap = transmitted.foldLeft(broadcastMap) { case (map, broadcast) =>
+        if(broadcast.transmitCount < Config.maxBroadcastTransmitCount - 1) {  // Transmit count has not yet been updated
+          map + (broadcast.message.member.name -> broadcast.copy(transmitCount = broadcast.transmitCount + 1))
+        } else {
+          map - broadcast.message.member.name
+        }
+      }
+      this.copy(newBroadcastMap)
+    }
+  }
 }
 
 case class SendBroadcasts(members: List[Member])
-case class Broadcast(message: MemberStateMessage, transmitCount: Int)
-
-case class BroadcastState(val broadcastMap: Map[String, Broadcast]) {
-  def +(broadcast: Broadcast) = this.copy(broadcastMap + (broadcast.message.member.name -> broadcast))
-  def -(broadcast: Broadcast) = this.copy(broadcastMap - broadcast.message.member.name)
-  def broadcasts = broadcastMap.values.toList
-  def updatedWithTransmit(transmitted: List[Broadcast]) = {
-    val newBroadcastMap = transmitted.foldLeft(broadcastMap) { case (map, broadcast) =>
-      if(broadcast.transmitCount < Config.maxBroadcastTransmitCount - 1) {  // Transmit count has not yet been updated
-        map + (broadcast.message.member.name -> broadcast.copy(transmitCount = broadcast.transmitCount + 1))
-      } else {
-        map - broadcast.message.member.name
-      }
-    }
-    this.copy(newBroadcastMap)
-  }
-}
