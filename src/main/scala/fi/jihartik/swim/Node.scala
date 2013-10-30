@@ -33,13 +33,13 @@ class Node(host: String, port: Int) extends Actor{
 
     case TriggerProbes => {
       val sender = self
-      getRemoteMembers.onSuccess { case members => failureDetector.tell(ProbeMembers(members), sender) }  // Use us as a sender to get timeouts back properly
+      getNotDeadRemotes.onSuccess { case members => failureDetector.tell(ProbeMembers(members), sender) }  // Use us as a sender to get timeouts back properly
     }
     case ProbeTimedOut(member) => cluster ! SuspectMember(member)
   }
 
   private def getMembers = cluster.ask(GetMembers).mapTo[List[Member]]
-  private def getRemoteMembers = cluster.ask(GetRemotes).mapTo[List[Member]]
+  private def getNotDeadRemotes = cluster.ask(GetNotDeadRemotes).mapTo[List[Member]]
 
   case object TriggerProbes
 }

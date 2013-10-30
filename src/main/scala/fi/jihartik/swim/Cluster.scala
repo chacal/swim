@@ -19,7 +19,7 @@ class Cluster(host: String, port: Int, broadcaster: ActorRef) extends Actor with
     case TriggerBroadcasts => broadcaster ! SendBroadcasts(state.notDeadRemotes)
 
     case GetMembers => sender ! state.members
-    case GetRemotes => sender ! state.remotes
+    case GetNotDeadRemotes => sender ! state.notDeadRemotes
 
     case NewMembers(newMembers) => mergeMembers(newMembers)
     case CompoundUdpMessage(messages) => messages.foreach(handleMemberStateMessages)
@@ -93,4 +93,4 @@ class Cluster(host: String, port: Int, broadcaster: ActorRef) extends Actor with
 
 case class Join(host: InetSocketAddress)
 case object GetMembers
-case object GetRemotes
+case object GetNotDeadRemotes
