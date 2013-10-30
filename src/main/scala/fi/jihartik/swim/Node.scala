@@ -22,8 +22,10 @@ class Node(host: String, port: Int) extends Actor{
   udp ! RegisterReceiver(cluster)
 
   def receive = {
-    case Join(host) => cluster.ask(GetMembers).mapTo[List[Member]].map(PushMembers(host, _)).pipeTo(http)
+    case Join(host) => getMembers.map(SendMembers(host, _)).pipeTo(http)
     case msg: NewMembers => cluster ! msg
-    case msg @ GetMembers => cluster forward msg
+    case msg @ GetMembers => getMembers pipeTo sender
   }
+
+  private def getMembers = cluster.ask(GetMembers).mapTo[List[Member]]
 }
