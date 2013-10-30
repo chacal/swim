@@ -18,7 +18,7 @@ trait Pinger extends Actor with ActorLogging {
   def receive = {
     case Start => {
       udp ! RegisterReceiver(self)
-      val task = context.system.scheduler.scheduleOnce(Config.ackTimeout, self, AckTimedOut)
+      val task = Util.scheduleOnce(Config.ackTimeout, self, AckTimedOut)
       sendPings
       context.become(waitingForAck(task))
     }

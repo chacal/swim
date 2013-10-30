@@ -5,8 +5,6 @@ import java.net.InetSocketAddress
 import java.util.concurrent.atomic.AtomicLong
 
 class Cluster(host: String, port: Int, broadcaster: ActorRef, failureDetector: ActorRef) extends Actor with ActorLogging {
-  import context.dispatcher
-
   val localAddress = new InetSocketAddress(host, port)
   val localName = s"Node $host"
 
@@ -14,8 +12,8 @@ class Cluster(host: String, port: Int, broadcaster: ActorRef, failureDetector: A
   var state = ClusterState(localName, Map(localName -> Member(localName, host, port, Alive, incarnationNo.getAndIncrement)))
 
   override def preStart = {
-    context.system.scheduler.schedule(Config.broadcastInterval, Config.broadcastInterval, self, TriggerBroadcasts)
-    context.system.scheduler.schedule(Config.probeInterval, Config.probeInterval, self, TriggerProbes)
+    Util.schedule(Config.broadcastInterval, self, TriggerBroadcasts)
+    Util.schedule(Config.probeInterval, self, TriggerProbes)
   }
 
   def receive = handleMemberStateMessages orElse {
@@ -61,7 +59,7 @@ class Cluster(host: String, port: Int, broadcaster: ActorRef, failureDetector: A
       log.info("Suspect: " + member)
       broadcast(SuspectMember(member))
       state += member.copy(state = Suspect)
-      context.system.scheduler.scheduleOnce(Config.suspectPeriod, self, ConfirmSuspicion(member))
+      Util.scheduleOnce(Config.suspectPeriod, self, ConfirmSuspicion(member))
     }
   }
 
