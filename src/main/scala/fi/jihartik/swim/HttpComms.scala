@@ -39,17 +39,20 @@ class HttpHandler(node: ActorRef) extends HttpServiceActor {
       post {
         entity(as[List[Member]]) { members =>
           complete {
-            node.ask(NewMembers(members)).mapTo[List[Member]]
+            node ! NewMembers(members)
+            getMembers
           }
         }
       } ~
       get {
         complete {
-          node.ask(NewMembers(Nil)).mapTo[List[Member]]
+          getMembers
         }
       }
     }
   }
+
+  def getMembers = node.ask(GetMembers).mapTo[List[Member]]
 }
 
 case class PushMembers(to: InetSocketAddress, members: List[Member])
