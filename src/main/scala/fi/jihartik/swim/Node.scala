@@ -13,12 +13,12 @@ class Node(host: String, port: Int) extends Actor{
   import context.dispatcher
 
   val localAddress = new InetSocketAddress(host, port)
-  val udp = context.actorOf(Props(classOf[UdpComms], localAddress))
-  val http = context.actorOf(Props(classOf[HttpComms], self, localAddress))
+  val udp = context.actorOf(Props(classOf[UdpComms], localAddress), "udp")
+  val http = context.actorOf(Props(classOf[HttpComms], self, localAddress), "http")
 
-  val broadcaster = context.actorOf(Props(classOf[Broadcaster], udp))
-  val failureDetector = context.actorOf(Props(classOf[FailureDetector], udp))
-  val cluster = context.actorOf(Props(classOf[Cluster], host, port, broadcaster, failureDetector))
+  val broadcaster = context.actorOf(Props(classOf[Broadcaster], udp), "broadcaster")
+  val failureDetector = context.actorOf(Props(classOf[FailureDetector], udp), "failure-detector")
+  val cluster = context.actorOf(Props(classOf[Cluster], host, port, broadcaster, failureDetector), "cluster")
   udp ! RegisterReceiver(cluster)
 
   def receive = {
