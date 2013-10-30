@@ -13,7 +13,6 @@ trait Pinger extends Actor with ActorLogging {
   val seqNo = ProbeSeqNo.next
 
   override def preStart() = self ! Start
-  override def postStop() = udp ! UnregisterReceiver(self)
 
   def receive = {
     case Start => {

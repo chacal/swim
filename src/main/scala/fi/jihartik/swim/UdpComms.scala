@@ -1,6 +1,6 @@
 package fi.jihartik.swim
 
-import akka.actor.{ActorLogging, Actor, ActorRef}
+import akka.actor.{Terminated, ActorLogging, Actor, ActorRef}
 import java.net.InetSocketAddress
 import akka.io.{Udp, IO}
 import akka.pattern.ask
@@ -26,8 +26,11 @@ class UdpComms(bindAddress: InetSocketAddress) extends Actor with ActorLogging {
   }
 
   def handleRegistrations: Receive = {
-    case RegisterReceiver(receiver) => receivers += receiver
-    case UnregisterReceiver(receiver) => receivers -= receiver
+    case RegisterReceiver(receiver) => {
+      receivers += receiver
+      context.watch(receiver)  // Get notified of death -> unregister on notification
+    }
+    case Terminated(victim) => receivers -= victim
   }
 
   def send(ioActor: ActorRef, to: Member, message: UdpMessage): Unit = send(ioActor, addressFor(to), message)
@@ -38,4 +41,3 @@ class UdpComms(bindAddress: InetSocketAddress) extends Actor with ActorLogging {
 
 case class SendMessage(to: Member, message: UdpMessage)
 case class RegisterReceiver(registree: ActorRef)
-case class UnregisterReceiver(registree: ActorRef)

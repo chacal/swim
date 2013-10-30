@@ -5,7 +5,6 @@ import akka.actor._
 class FailureDetector(udp: ActorRef) extends Actor with ActorLogging {
 
   override def preStart() = udp ! RegisterReceiver(self)
-  override def postStop() = udp ! UnregisterReceiver(self)
 
   def receive = {
     case ProbeMembers(members) => probeMembers(members)
