@@ -95,5 +95,4 @@ class Cluster(host: String, port: Int, broadcaster: ActorRef, failureDetector: A
 
 case class Join(host: InetSocketAddress)
 case class ProbeMembers(members: List[Member])
-case class NewMembers(members: List[Member])
 case object GetMembers
