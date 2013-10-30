@@ -11,13 +11,7 @@ class Cluster(host: String, port: Int, broadcaster: ActorRef) extends Actor with
   val incarnationNo = new AtomicLong(0)
   var state = ClusterState(localName, Map(localName -> Member(localName, host, port, Alive, incarnationNo.getAndIncrement)))
 
-  override def preStart = {
-    Util.schedule(Config.broadcastInterval, self, TriggerBroadcasts)
-  }
-
   def receive = handleMemberStateMessages orElse {
-    case TriggerBroadcasts => broadcaster ! SendBroadcasts(state.notDeadRemotes)
-
     case GetMembers => sender ! state.members
     case GetNotDeadRemotes => sender ! state.notDeadRemotes
 
@@ -87,7 +81,6 @@ class Cluster(host: String, port: Int, broadcaster: ActorRef) extends Actor with
   def broadcast(message: MemberStateMessage) = broadcaster ! message
 
   case class ConfirmSuspicion(member: Member)
-  case object TriggerBroadcasts
 }
 
 

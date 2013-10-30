@@ -24,6 +24,7 @@ class Node(host: String, port: Int) extends Actor{
 
   override def preStart = {
     Util.schedule(Config.probeInterval, self, TriggerProbes)
+    Util.schedule(Config.broadcastInterval, self, TriggerBroadcasts)
   }
 
   def receive = {
@@ -36,10 +37,13 @@ class Node(host: String, port: Int) extends Actor{
       getNotDeadRemotes.onSuccess { case members => failureDetector.tell(ProbeMembers(members), sender) }  // Use us as a sender to get timeouts back properly
     }
     case ProbeTimedOut(member) => cluster ! SuspectMember(member)
+
+    case TriggerBroadcasts => getNotDeadRemotes.map(SendBroadcasts).pipeTo(broadcaster)
   }
 
   private def getMembers = cluster.ask(GetMembers).mapTo[List[Member]]
   private def getNotDeadRemotes = cluster.ask(GetNotDeadRemotes).mapTo[List[Member]]
 
   case object TriggerProbes
+  case object TriggerBroadcasts
 }
