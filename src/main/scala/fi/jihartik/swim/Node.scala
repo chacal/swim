@@ -19,11 +19,11 @@ class Node(host: String, port: Int) extends Actor{
   val broadcaster = context.actorOf(Props(classOf[Broadcaster], udp), "broadcaster")
   val failureDetector = context.actorOf(Props(classOf[FailureDetector], udp), "failure-detector")
   val cluster = context.actorOf(Props(classOf[Cluster], host, port, broadcaster, failureDetector), "cluster")
-  udp ! RegisterReceiver(cluster)
+  udp ! RegisterReceiver(self)
 
   def receive = {
     case Join(host) => getMembers.map(SendMembers(host, _)).pipeTo(http)
-    case msg: NewMembers => cluster ! msg
+    case msg: ClusterStateMessage => cluster ! msg
     case msg @ GetMembers => getMembers pipeTo sender
   }
 
