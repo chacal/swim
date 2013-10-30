@@ -23,7 +23,7 @@ class HttpComms(node: ActorRef, bindAddress: InetSocketAddress) extends Actor {
 
   def receive = {
     case Http.Connected(_, _) => sender ! Http.Register(context.system.actorOf(Props(new HttpHandler(node))))
-    case PushMembers(to, members) => (httpPipeline ~> unmarshal[List[Member]]).apply(sendMembersRequest(to, members)).map(ReceiveMembers) pipeTo node
+    case PushMembers(to, members) => (httpPipeline ~> unmarshal[List[Member]]).apply(sendMembersRequest(to, members)).map(NewMembers) pipeTo node
   }
 
   private def sendMembersRequest(to: InetSocketAddress, members: List[Member]) = Post(s"http://${to.getHostName}:${to.getPort}/members", members)
@@ -39,13 +39,13 @@ class HttpHandler(node: ActorRef) extends HttpServiceActor {
       post {
         entity(as[List[Member]]) { members =>
           complete {
-            node.ask(ReceiveMembers(members)).mapTo[List[Member]]
+            node.ask(NewMembers(members)).mapTo[List[Member]]
           }
         }
       } ~
       get {
         complete {
-          node.ask(ReceiveMembers(Nil)).mapTo[List[Member]]
+          node.ask(NewMembers(Nil)).mapTo[List[Member]]
         }
       }
     }

@@ -23,6 +23,9 @@ class Node(host: String, port: Int) extends Actor{
 
   def receive = {
     case Join(host) => cluster.ask(GetMembers).mapTo[List[Member]].map(PushMembers(host, _)).pipeTo(http)
-    case msg: ReceiveMembers => cluster forward msg
+    case msg: NewMembers => {
+      cluster ! msg
+      cluster ? GetMembers pipeTo sender
+    }
   }
 }
