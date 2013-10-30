@@ -15,3 +15,5 @@ libraryDependencies += "io.spray" % "spray-routing" % "1.2-RC1"
 libraryDependencies += "io.spray" % "spray-client" % "1.2-RC1"
 
 libraryDependencies += "io.spray" %% "spray-json" % "1.2.5"
+
+libraryDependencies += "org.scalatest" % "scalatest_2.10" % "2.0.RC3" % "test"
