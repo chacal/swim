@@ -3,7 +3,6 @@ package fi.jihartik.swim
 import spray.json._
 
 object JsonSerialization extends DefaultJsonProtocol {
-  implicit val memberFormat = jsonFormat5(Member)
   implicit object MemberStateFormat extends RootJsonFormat[MemberState] {
     def write(state: MemberState): JsValue = state match {
       case Alive => JsString("alive")
@@ -18,4 +17,5 @@ object JsonSerialization extends DefaultJsonProtocol {
       case _ => spray.json.deserializationError("State must by 'alive', 'dead' or 'suspect")
     }
   }
+  implicit val memberFormat = jsonFormat5(Member)
 }
