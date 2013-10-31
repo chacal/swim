@@ -16,6 +16,7 @@ import spray.httpx.SprayJsonSupport._
 class HttpComms(node: ActorRef, bindAddress: InetSocketAddress) extends Actor with Stash {
   import context.dispatcher
   import JsonSerialization._
+  implicit val timeout = Timeout(5.seconds)
 
   val httpPipeline = sendReceive
 
@@ -32,6 +33,10 @@ class HttpComms(node: ActorRef, bindAddress: InetSocketAddress) extends Actor wi
   def listening(listener: ActorRef): Receive = {
     case Http.Connected(_, _) => sender ! Http.Register(context.system.actorOf(Props(new HttpHandler(node))))
     case SendMembers(to, members) => (httpPipeline ~> unmarshal[List[Member]]).apply(sendMembersRequest(to, members)).map(NewMembers) pipeTo node
+    case Stop => {
+      val originalSender = sender
+      listener ? Http.Unbind pipeTo(originalSender)
+    }
   }
 
   private def sendMembersRequest(to: InetSocketAddress, members: List[Member]) = Post(s"http://${to.getHostName}:${to.getPort}/members", members)

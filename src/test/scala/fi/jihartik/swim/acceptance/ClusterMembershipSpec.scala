@@ -41,7 +41,7 @@ class ClusterMembershipSpec extends WordSpec with Eventually with Matchers with 
       node3 ! Join(host, port1)
       assertNotDeadClusterSize(List(node1, node2, node3), 3)
 
-      system.stop(node2)
+      node2 ! Stop
       assertNotDeadClusterSize(List(node1, node3), 2)
       val (_, newNode2) = startNode(port = port2)
       newNode2 ! Join(host, port1)

@@ -6,7 +6,7 @@ import akka.pattern.ask
 import akka.pattern.pipe
 import scala.concurrent.duration._
 import akka.util.Timeout
-
+import scala.concurrent.Await
 
 class Node(host: String, port: Int) extends Actor{
   implicit val timeout = Timeout(5.seconds)
@@ -30,6 +30,10 @@ class Node(host: String, port: Int) extends Actor{
   def receive = {
     case Join(host) => getMembers.map(SendMembers(host, _)).pipeTo(http)
     case msg @ GetMembers => getMembers pipeTo sender
+    case Stop => {
+      stopHttp
+      context.stop(self)
+    }
 
     case CompoundUdpMessage(messages) => messages.foreach(cluster ! _)
     case msg: ClusterStateMessage => cluster ! msg
@@ -45,6 +49,7 @@ class Node(host: String, port: Int) extends Actor{
 
   private def getMembers = cluster.ask(GetMembers).mapTo[List[Member]]
   private def getNotDeadRemotes = cluster.ask(GetNotDeadRemotes).mapTo[List[Member]]
+  private def stopHttp = Await.ready(http ? Stop, timeout.duration)
 
   case object TriggerProbes
   case object TriggerBroadcasts
@@ -54,3 +59,4 @@ object Join {
   def apply(host: String, port: Int): Join = Join(new InetSocketAddress(host, port))
 }
 case class Join(host: InetSocketAddress)
+case object Stop
