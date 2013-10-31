@@ -54,8 +54,8 @@ class Cluster(host: String, port: Int, broadcaster: ActorRef) extends Actor with
   def announceDead: PartialFunction[Member, Unit] = {
     case member if(state.isNotDead(member)) => {
       broadcast(DeadMember(member))
-      state -= member
       log.info("Dead: " + member)
+      state += member.copy(state = Dead, incarnation = 0)
     }
   }
 
