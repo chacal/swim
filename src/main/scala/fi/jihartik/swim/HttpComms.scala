@@ -1,6 +1,6 @@
 package fi.jihartik.swim
 
-import akka.actor.{Actor, Props, ActorRef}
+import akka.actor.{Stash, Actor, Props, ActorRef}
 import spray.can.Http
 import akka.io.IO
 import spray.routing.HttpServiceActor
@@ -13,7 +13,7 @@ import spray.client.pipelining._
 import spray.httpx.SprayJsonSupport._
 
 
-class HttpComms(node: ActorRef, bindAddress: InetSocketAddress) extends Actor {
+class HttpComms(node: ActorRef, bindAddress: InetSocketAddress) extends Actor with Stash {
   import context.dispatcher
   import JsonSerialization._
 
@@ -22,6 +22,14 @@ class HttpComms(node: ActorRef, bindAddress: InetSocketAddress) extends Actor {
   override def preStart() = IO(Http)(context.system) ! Http.Bind(self, bindAddress, 100, Nil, None)
 
   def receive = {
+    case Http.Bound(_) => {
+      unstashAll()
+      context.become(listening(sender))
+    }
+    case msg => stash()  // Queue all messages until we are ready (= Bound message received)
+}
+
+  def listening(listener: ActorRef): Receive = {
     case Http.Connected(_, _) => sender ! Http.Register(context.system.actorOf(Props(new HttpHandler(node))))
     case SendMembers(to, members) => (httpPipeline ~> unmarshal[List[Member]]).apply(sendMembersRequest(to, members)).map(NewMembers) pipeTo node
   }
