@@ -7,7 +7,7 @@ class Cluster(host: String, port: Int, broadcaster: ActorRef, config: Config) ex
   val localName = s"Node $host:$port"
 
   val incarnationNo = new AtomicLong(0)
-  var state = ClusterState(localName, Map(localName -> Member(localName, host, port, Alive, incarnationNo.getAndIncrement)))
+  var state = ClusterState(localName, Map(localName -> Member(localName, host, port, Alive, incarnationNo.get)))
 
   def receive = {
     case GetMembers => sender ! state.members
