@@ -11,7 +11,7 @@ import akka.pattern.ask
 import akka.pattern.pipe
 import spray.client.pipelining._
 import spray.httpx.SprayJsonSupport._
-
+import spray.json.CompactPrinter
 
 class HttpComms(node: ActorRef, bindAddress: InetSocketAddress) extends Actor with Stash {
   import context.dispatcher
@@ -45,6 +45,7 @@ class HttpComms(node: ActorRef, bindAddress: InetSocketAddress) extends Actor wi
 class HttpHandler(node: ActorRef) extends HttpServiceActor {
   import context.dispatcher
   import JsonSerialization._
+  implicit val jsonPrinter = CompactPrinter
   implicit val timeout = Timeout(5.seconds)
 
   def receive = runRoute {
