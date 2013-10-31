@@ -11,7 +11,8 @@ import scala.concurrent.duration._
 import akka.util.Timeout
 
 trait NodeTesting extends WordSpec with BeforeAndAfterAll with Eventually with Matchers with IntegrationPatience {
-  val system = ActorSystem()
+  implicit val system = ActorSystem()
+  implicit val executionContext = system.dispatcher
   implicit val timeout = new Timeout(5.seconds)
   val host = "127.0.0.1"
 
