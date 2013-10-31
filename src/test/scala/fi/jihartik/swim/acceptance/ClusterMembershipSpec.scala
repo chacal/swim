@@ -54,7 +54,7 @@ class ClusterMembershipSpec extends WordSpec with Eventually with Matchers with 
   }
 
   def startNode(host: String = host, port: Int = RandomPort()) = {
-    (port, system.actorOf(Props(classOf[Node], host, port)))
+    (port, system.actorOf(Props(classOf[Node], host, port, DefaultConfig)))
   }
   def getMembersFrom(node: ActorRef) = Await.result(node.ask(GetMembers).mapTo[List[Member]], timeout.duration)
 }

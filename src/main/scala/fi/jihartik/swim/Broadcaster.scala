@@ -3,7 +3,7 @@ package fi.jihartik.swim
 import akka.actor.{ActorLogging, ActorRef, Actor}
 import scala.annotation.tailrec
 
-class Broadcaster(udp: ActorRef) extends Actor with ActorLogging {
+class Broadcaster(udp: ActorRef, config: Config) extends Actor with ActorLogging {
   var state = BroadcastState(Map())
 
   def receive = {
@@ -15,7 +15,7 @@ class Broadcaster(udp: ActorRef) extends Actor with ActorLogging {
     val toBeSend = state.broadcasts
     if(! toBeSend.isEmpty) {
       val (combinedBroadcasts, compoundMsg) = createCompoundMessage(toBeSend)
-      val targetMembers = Util.takeRandom(members, Config.broadcastMemberCount)
+      val targetMembers = Util.takeRandom(members, config.broadcastMemberCount)
       sendMessage(targetMembers, compoundMsg)
       state = state.updatedWithTransmit(combinedBroadcasts)
     }
@@ -33,7 +33,7 @@ class Broadcaster(udp: ActorRef) extends Actor with ActorLogging {
         case Nil => (sent, createdMessage)
         case x :: xs => {
           val nextCandidate = createdMessage.copy(messages = createdMessage.messages :+ x.message)
-          if(createdMessage.toByteString.length < Config.maxUdpMessageSize) {
+          if(createdMessage.toByteString.length < config.maxUdpMessageSize) {
             addBroadcasts(xs, sent :+ x, nextCandidate)
           } else {
             (sent, createdMessage)
@@ -53,7 +53,7 @@ class Broadcaster(udp: ActorRef) extends Actor with ActorLogging {
     def broadcasts = broadcastMap.values.toList
     def updatedWithTransmit(transmitted: List[Broadcast]) = {
       val newBroadcastMap = transmitted.foldLeft(broadcastMap) { case (map, broadcast) =>
-        if(broadcast.transmitCount < Config.maxBroadcastTransmitCount - 1) {  // Transmit count has not yet been updated
+        if(broadcast.transmitCount < config.maxBroadcastTransmitCount - 1) {  // Transmit count has not yet been updated
           map + (broadcast.message.member.name -> broadcast.copy(transmitCount = broadcast.transmitCount + 1))
         } else {
           map - broadcast.message.member.name

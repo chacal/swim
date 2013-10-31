@@ -2,14 +2,16 @@ package fi.jihartik.swim
 
 import scala.concurrent.duration._
 
-object Config {
-  val probeInterval = 500.millis
-  val ackTimeout = 300.millis
-  val suspectPeriod = 2.seconds
-  val probedMemberCount = 3
-  val broadcastInterval = 200.millis
-  val broadcastMemberCount = 3
-  val maxBroadcastTransmitCount = 5
-  val indirectProbeCount = 3
-  val maxUdpMessageSize = 40000
-}
+case class Config(
+   probeInterval: FiniteDuration = 500.millis,
+   ackTimeout: FiniteDuration = 300.millis,
+   suspectPeriod: FiniteDuration = 2.seconds,
+   probedMemberCount: Int = 3,
+   broadcastInterval: FiniteDuration = 200.millis,
+   broadcastMemberCount: Int = 3,
+   maxBroadcastTransmitCount: Int = 5,
+   indirectProbeCount: Int = 3,
+   maxUdpMessageSize: Int = 40000
+)
+
+object DefaultConfig extends Config()

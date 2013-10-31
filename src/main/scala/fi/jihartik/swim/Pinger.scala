@@ -17,7 +17,7 @@ trait Pinger extends Actor with ActorLogging {
   def receive = {
     case Start => {
       udp ! RegisterReceiver(self)
-      val task = Util.scheduleOnce(Config.ackTimeout, self, AckTimedOut)
+      val task = Util.scheduleOnce(config.ackTimeout, self, AckTimedOut)
       sendPings
       context.become(waitingForAck(task))
     }
@@ -36,6 +36,7 @@ trait Pinger extends Actor with ActorLogging {
   }
 
   def udp: ActorRef
+  def config: Config
   def sendPings: Unit
   def ackReceived: Unit = {}
   def ackTimedOut: Unit = {}
@@ -44,22 +45,22 @@ trait Pinger extends Actor with ActorLogging {
   case object AckTimedOut
 }
 
-class DirectPinger(receiver: ActorRef, target: Member, possibleForwarders: List[Member], val udp: ActorRef) extends Pinger {
+class DirectPinger(receiver: ActorRef, target: Member, possibleForwarders: List[Member], val udp: ActorRef, val config: Config) extends Pinger {
   def sendPings = udp ! SendMessage(target, Ping(seqNo))
   override def ackTimedOut = {
     // Note context.system! IndirectPinger must not be created as a child of DirectPinger as it will terminate after its timeout and thus kill it children
-    context.system.actorOf(Props(classOf[IndirectPinger], receiver, target, possibleForwarders, udp))
+    context.system.actorOf(Props(classOf[IndirectPinger], receiver, target, possibleForwarders, udp, config))
   }
 }
 
 
-class IndirectPinger(receiver: ActorRef, target: Member, forwarders: List[Member], val udp: ActorRef) extends Pinger {
+class IndirectPinger(receiver: ActorRef, target: Member, forwarders: List[Member], val udp: ActorRef, val config: Config) extends Pinger {
   def sendPings = forwarders.foreach(fwd => udp ! SendMessage(fwd, IndirectPing(seqNo, target)))
   override def ackTimedOut = receiver ! ProbeTimedOut(target)
 }
 
 
-class ForwardPinger(receiver: ActorRef, target: Member, originalSeqNo: Long, val udp: ActorRef) extends Pinger {
+class ForwardPinger(receiver: ActorRef, target: Member, originalSeqNo: Long, val udp: ActorRef, val config: Config) extends Pinger {
   def sendPings = udp ! SendMessage(target, Ping(seqNo))
   override def ackReceived = receiver ! Ack(originalSeqNo)
 }

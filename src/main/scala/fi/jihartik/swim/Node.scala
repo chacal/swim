@@ -8,7 +8,7 @@ import scala.concurrent.duration._
 import akka.util.Timeout
 import scala.concurrent.Await
 
-class Node(host: String, port: Int) extends Actor{
+class Node(host: String, port: Int, config: Config) extends Actor{
   implicit val timeout = Timeout(5.seconds)
   import context.dispatcher
 
@@ -16,15 +16,15 @@ class Node(host: String, port: Int) extends Actor{
 
   val udp = context.actorOf(Props(classOf[UdpComms], localAddress), "udp")
   val http = context.actorOf(Props(classOf[HttpComms], self, localAddress), "http")
-  val failureDetector = context.actorOf(Props(classOf[FailureDetector], udp), "failure-detector")
+  val failureDetector = context.actorOf(Props(classOf[FailureDetector], udp, config), "failure-detector")
 
-  val broadcaster = context.actorOf(Props(classOf[Broadcaster], udp), "broadcaster")
-  val cluster = context.actorOf(Props(classOf[Cluster], host, port, broadcaster), "cluster")
+  val broadcaster = context.actorOf(Props(classOf[Broadcaster], udp, config), "broadcaster")
+  val cluster = context.actorOf(Props(classOf[Cluster], host, port, broadcaster, config), "cluster")
   udp ! RegisterReceiver(self)
 
   override def preStart = {
-    Util.schedule(Config.probeInterval, self, TriggerProbes)
-    Util.schedule(Config.broadcastInterval, self, TriggerBroadcasts)
+    Util.schedule(config.probeInterval, self, TriggerProbes)
+    Util.schedule(config.broadcastInterval, self, TriggerBroadcasts)
   }
 
   def receive = {

@@ -3,7 +3,7 @@ package fi.jihartik.swim
 import akka.actor.{ActorRef, ActorLogging, Actor}
 import java.util.concurrent.atomic.AtomicLong
 
-class Cluster(host: String, port: Int, broadcaster: ActorRef) extends Actor with ActorLogging {
+class Cluster(host: String, port: Int, broadcaster: ActorRef, config: Config) extends Actor with ActorLogging {
   val localName = s"Node $host:$port"
 
   val incarnationNo = new AtomicLong(0)
@@ -43,7 +43,7 @@ class Cluster(host: String, port: Int, broadcaster: ActorRef) extends Actor with
       log.info("Suspect: " + member)
       broadcast(SuspectMember(member))
       state += member.copy(state = Suspect)
-      Util.scheduleOnce(Config.suspectPeriod, self, ConfirmSuspicion(member))
+      Util.scheduleOnce(config.suspectPeriod, self, ConfirmSuspicion(member))
     }
   }
 
