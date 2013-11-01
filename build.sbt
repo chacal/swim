@@ -17,3 +17,9 @@ libraryDependencies += "io.spray" % "spray-client" % "1.2-RC1"
 libraryDependencies += "io.spray" %% "spray-json" % "1.2.5"
 
 libraryDependencies += "org.scalatest" % "scalatest_2.10" % "2.0.RC3" % "test"
+
+libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.0.13" % "test"
+
+libraryDependencies += "com.typesafe.akka" %% "akka-slf4j" % "2.2.3" % "test"
+
+initialize ~= { _ => System.setProperty("ROOT_LOG_LEVEL", "error") }
